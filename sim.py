@@ -17,23 +17,28 @@ def simulation():
     patients = read_xls()
     for id, patient in patients.items():
         data = []
-        data.append((patient, get_softmax(patient)))
+        orig_prob = get_softmax(patient)
         for molecule in patient['molecules'].keys():
             for arg in range(5):
                 p = deepcopy(patient)
                 p['molecules'][molecule][arg] = 1
+                p['scenario'] = (molecule, f'Intensity_{arg + 1}')
+                p['orig_prob'] = orig_prob
                 data.append((p, get_softmax(p)))
-        save_patient(root / f'patient-{id}.xlsx', data)
+        save_patient(root / f'patient-{id}.xlsx', id, data)
 
 
-def save_patient(path, data):
+def save_patient(path, id, data):
     book = openpyxl.load_workbook('./tpl.xlsx')
     sheet = book.active
     add_row = add_to_sheet(sheet)
     for case, prob in data:
         for molecule in MOLECULES:
-            row = [molecule]
+            row = [id]
+            row.extend(case['scenario'])
+            row.append(molecule)
             row.extend(case['molecules'][molecule])
+            row.append(case['orig_prob'][molecule])
             row.append(prob[molecule])
             add_row(row)
     book.save(path)
